@@ -109,19 +109,25 @@ You should see `opencode-go-limits-tracker` listed with source `local`.
 - OpenCode **V2** (tested on 2.0.18–2.2.5). Uses the V2 plugin API
   (server `Plugin.define` + `ctx.rpc.register`, TUI `Plugin.define` + `context.ui.slot`
   + `context.client.rpc`) — it will **not** load on V1 (1.x).
-- OpenCode Go connected in OpenCode (`/connect` → OpenCode Go, or any auth flow that creates
-  an `opencode-go` credential — stored in `~/.local/share/opencode/opencode.db`, table
-  `credential`, not in the legacy `auth.json`).
+- OpenCode Console connected in OpenCode (`/connect` → Console, creates an `opencode`
+  credential — stored in `~/.local/share/opencode/opencode.db`, table `credential`).
+  A legacy `opencode-go` API key is still supported as fallback.
 - A sidebar-capable terminal width (`session.sidebar` is `auto` by default; widen the window
   if the sidebar is hidden).
 
 ## How it works
 
-The **server** part (`index.ts`) resolves the Go key through the official API:
+The **server** part (`index.ts`) resolves auth through the official API —
+Console direct auth first, Go API key as fallback:
 
 ```ts
-const connection = await ctx.integration.connection.active("opencode-go")
+// 1. Default: Console OAuth (opencode integration)
+const connection = await ctx.integration.connection.active("opencode")
 const cred = await ctx.integration.connection.resolve(connection)
+// Bearer access + x-opencode-org-id, like OpenCode's own UsageLimits
+
+// 2. Fallback: legacy Go API key (opencode-go integration)
+const goConnection = await ctx.integration.connection.active("opencode-go")
 ```
 
 It calls the same JSON endpoint the OpenCode web console uses:
@@ -151,10 +157,10 @@ Response shape:
 
 The result is exposed over RPC (`rpc.ts`, `GoUsage.getUsage`), and the **TUI** part (`tui.ts`)
 polls it via `context.client.rpc(GoUsage).getUsage({})` every 60s and after each session run.
-The raw key stays server-side — the TUI only ever sees the parsed `usage` object.
+The raw key/token stays server-side — the TUI only ever sees the parsed `usage` object.
 
 No browser cookies, no page scraping, no `auth.json` parsing. Nothing is sent anywhere except to
-`opencode.ai`, and the key never leaves your machine.
+`opencode.ai`, and secrets never leave your machine.
 
 ## Colors
 
