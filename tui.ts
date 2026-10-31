@@ -42,8 +42,9 @@ function colorFor(theme, percent) {
 }
 
 function activeProvider(context, sessionID) {
-  const fromSession = context.data.session.get(sessionID)?.model?.providerID
-  return fromSession ?? context.ui.model.current()?.providerID
+  const fromUI = context.ui.model.current()?.providerID
+  if (fromUI) return fromUI
+  return context.data.session.get(sessionID)?.model?.providerID
 }
 
 function countdown(iso) {
