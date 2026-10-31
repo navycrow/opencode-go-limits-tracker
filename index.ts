@@ -27,19 +27,44 @@ function credentialOrgID(cred: unknown): string | null {
   return null
 }
 
-function credentialOrigin(cred: unknown): string {
+function credentialServer(cred: unknown): string {
   if (cred && typeof cred === "object") {
     const metadata = (cred as Record<string, unknown>).metadata as
       | Record<string, unknown>
       | undefined
     const server = metadata?.server
     if (typeof server === "string" && server.startsWith("http")) {
-      try {
-        return new URL(server).origin
-      } catch {}
+      return server.replace(/\/$/, "")
     }
   }
-  return "https://opencode.ai"
+  return "https://opencode.ai/console"
+}
+
+function consoleBase(cred: unknown): string {
+  // Mirrors OpenCode core: map legacy console host, then take the origin.
+  const server = credentialServer(cred).replace(
+    /^https:\/\/console\.opencode\.ai(?=\/|$)/,
+    "https://opencode.ai/console",
+  )
+  try {
+    return new URL(server).origin
+  } catch {
+    return "https://opencode.ai"
+  }
+}
+
+function workspaceUsageURL(cred: unknown): string | null {
+  const orgID = credentialOrgID(cred)
+  if (!orgID) return null
+  const server = credentialServer(cred).replace(
+    /^https:\/\/console\.opencode\.ai(?=\/|$)/,
+    "https://opencode.ai/console",
+  )
+  return `${server}/${orgID}/activity/overview`
+}
+
+function credentialOrigin(cred: unknown): string {
+  return consoleBase(cred)
 }
 
 async function fetchUsage(
@@ -77,7 +102,7 @@ export default Plugin.define({
               const res = await fetchUsage(origin, bearer, orgID, context.signal)
               if (res.ok) {
                 const data = (await res.json()) as { usage?: unknown }
-                return { usage: data?.usage ?? null }
+                return { usage: data?.usage ?? null, usageURL: workspaceUsageURL(consoleCred) }
               }
               if (res.status !== 403 && res.status !== 401) {
                 return context.error("fetch_failed", `usage endpoint returned ${res.status}`, {
@@ -107,7 +132,7 @@ export default Plugin.define({
             status: res.status,
           })
         const data = (await res.json()) as { usage?: unknown }
-        return { usage: data?.usage ?? null }
+        return { usage: data?.usage ?? null, usageURL: null }
       },
     })
 
