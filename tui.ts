@@ -66,12 +66,14 @@ export default Plugin.define({
 
     const dispose = createRoot((rootDispose) => {
       const [usage, setUsage] = createSignal(null)
+      const [usageURL, setUsageURL] = createSignal<string | null>(null)
       const [tick, setTick] = createSignal(0)
 
       const refresh = async () => {
         try {
-          const result = (await goUsage.getUsage({})) as { usage?: unknown }
+          const result = (await goUsage.getUsage({})) as { usage?: unknown; usageURL?: unknown }
           setUsage((result?.usage as never) ?? null)
+          setUsageURL(typeof result?.usageURL === "string" ? result.usageURL : null)
         } catch {}
       }
 
@@ -87,6 +89,27 @@ export default Plugin.define({
       const resetText = (key) => {
         void tick()
         return countdown(usage()?.[key]?.resetsAt)
+      }
+
+      const urlRow = () => {
+        return jsx(Show, {
+          get when() {
+            return usageURL()
+          },
+          get children() {
+            return jsx("text", {
+              children: jsx("a", {
+                get href() {
+                  return usageURL() as string
+                },
+                get fg() {
+                  return context.theme?.text?.muted
+                },
+                children: "↗ Console",
+              }),
+            })
+          },
+        })
       }
 
       const stackedRow = (window) => {
@@ -176,6 +199,7 @@ export default Plugin.define({
                           compactRow(window, i === WINDOWS.length - 1),
                         ),
                       }),
+                      urlRow(),
                     ]
                   }
                   return [
@@ -190,6 +214,7 @@ export default Plugin.define({
                       gap: 1,
                       children: WINDOWS.map((window) => stackedRow(window)),
                     }),
+                    urlRow(),
                   ]
                 },
               })

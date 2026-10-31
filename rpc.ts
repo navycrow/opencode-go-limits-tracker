@@ -13,6 +13,7 @@ export const GoUsage = Rpc.define({
         type: "object",
         properties: {
           usage: {},
+          usageURL: {},
         },
         additionalProperties: true,
       },
