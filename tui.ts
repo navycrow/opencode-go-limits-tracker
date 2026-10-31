@@ -12,11 +12,11 @@ const COMPACT = false
 // between usage refreshes.
 const TICK_MS = 30_000
 const WINDOWS = [
-  { key: "rolling", label: "5-HOUR", compact: "5h" },
-  { key: "weekly", label: "WEEKLY", compact: "wk" },
-  { key: "monthly", label: "MONTHLY", compact: "mo" },
+  { key: "rolling", label: "Rolling", compact: "5h" },
+  { key: "weekly", label: "Weekly", compact: "wk" },
+  { key: "monthly", label: "Monthly", compact: "mo" },
 ]
-const BAR_CELLS = 12
+const BAR_CELLS = 20
 const PARTIAL_STEPS = ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉"]
 const LABEL_WIDTH = 7
 
@@ -55,8 +55,13 @@ function countdown(iso) {
   const minutes = Math.ceil(ms / 60_000)
   if (minutes < 60) return `${minutes}m`
   const hours = Math.floor(minutes / 60)
-  if (hours < 48) return `${hours}h`
-  return `${Math.round(hours / 24)}d`
+  if (hours < 24) {
+    const remMin = minutes % 60
+    return remMin ? `${hours}h${remMin}m` : `${hours}h`
+  }
+  const days = Math.floor(hours / 24)
+  const remHours = hours % 24
+  return remHours ? `${days}d${remHours}h` : `${days}d`
 }
 
 export default Plugin.define({
@@ -114,35 +119,58 @@ export default Plugin.define({
 
       const stackedRow = (window) => {
         return jsx("box", {
-          flexDirection: "row",
-          gap: 1,
+          flexDirection: "column",
           children: [
             jsx("box", {
-              width: LABEL_WIDTH,
-              children: jsx("text", {
-                children: window.label,
-                get fg() {
-                  return context.theme?.text?.muted
-                },
-              }),
+              flexDirection: "row",
+              gap: 1,
+              children: [
+                jsx("box", {
+                  width: LABEL_WIDTH,
+                  children: jsx("text", {
+                    children: window.label,
+                    get fg() {
+                      return context.theme?.text?.muted
+                    },
+                  }),
+                }),
+                jsx("text", {
+                  get children() {
+                    return meter(usage()?.[window.key]?.percent)
+                  },
+                  get fg() {
+                    return colorFor(context.theme, usage()?.[window.key]?.percent)
+                  },
+                }),
+                jsx("text", {
+                  get children() {
+                    const pct = usage()?.[window.key]?.percent ?? "–"
+                    return `${pct}% used`
+                  },
+                  get fg() {
+                    return colorFor(context.theme, usage()?.[window.key]?.percent)
+                  },
+                }),
+              ],
             }),
-            jsx("text", {
-              get children() {
-                return meter(usage()?.[window.key]?.percent)
-              },
-              get fg() {
-                return colorFor(context.theme, usage()?.[window.key]?.percent)
-              },
-            }),
-            jsx("text", {
-              get children() {
-                const pct = usage()?.[window.key]?.percent ?? "–"
-                const until = resetText(window.key) ?? ""
-                return `${pct}%${until ? ` ${until}` : ""}`
-              },
-              get fg() {
-                return colorFor(context.theme, usage()?.[window.key]?.percent)
-              },
+            jsx("box", {
+              flexDirection: "row",
+              gap: 1,
+              children: [
+                jsx("box", {
+                  width: LABEL_WIDTH,
+                  children: [],
+                }),
+                jsx("text", {
+                  get children() {
+                    const until = resetText(window.key) ?? ""
+                    return until ? `Resets in ${until}` : ""
+                  },
+                  get fg() {
+                    return context.theme?.text?.muted
+                  },
+                }),
+              ],
             }),
           ],
         })
