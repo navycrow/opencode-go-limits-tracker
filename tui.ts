@@ -20,18 +20,18 @@ const BAR_CELLS = 20
 const PARTIAL_STEPS = ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉"]
 const LABEL_WIDTH = 7
 
-function meter(percent) {
-  // Borderless omarchy-style bar: solid `█` fill on a `░` track, with a
-  // stepped partial-block character at the fill frontier so the edge
-  // resolves finer than one cell. Fill and track share one text node and
-  // one fg color — the shade glyphs read as a deeper tone of the fill.
+function meterParts(percent) {
+  // Partial edge kept with exactly two inks: the track glyph uses the band
+  // color as its foreground, so the band reads uniform and the partial's
+  // void matches the track exactly.
   const cells = ((percent ?? 0) / 100) * BAR_CELLS
   const full = Math.floor(cells)
   const rem = cells - full
   const step = rem > 0 ? Math.max(1, Math.round(rem * (PARTIAL_STEPS.length - 1))) : 0
-  return "█".repeat(full) +
-    (step ? PARTIAL_STEPS[step] : "") +
-    "░".repeat(Math.max(0, BAR_CELLS - full - (step ? 1 : 0)))
+  return {
+    filled: "█".repeat(full) + (step ? PARTIAL_STEPS[step] : ""),
+    track: "░".repeat(Math.max(0, BAR_CELLS - full - (step ? 1 : 0))),
+  }
 }
 
 function colorFor(theme, percent) {
@@ -134,13 +134,29 @@ export default Plugin.define({
                     },
                   }),
                 }),
-                jsx("text", {
-                  get children() {
-                    return meter(usage()?.[window.key]?.percent)
-                  },
-                  get fg() {
-                    return colorFor(context.theme, usage()?.[window.key]?.percent)
-                  },
+                jsx("box", {
+                  flexDirection: "row",
+                  children: [
+                    jsx("text", {
+                      get children() {
+                        return meterParts(usage()?.[window.key]?.percent).filled
+                      },
+                      get fg() {
+                        return colorFor(context.theme, usage()?.[window.key]?.percent)
+                      },
+                      get bg() {
+                        return context.theme?.border?.base ?? context.theme?.text?.muted
+                      },
+                    }),
+                    jsx("text", {
+                      get children() {
+                        return meterParts(usage()?.[window.key]?.percent).track
+                      },
+                      get fg() {
+                        return colorFor(context.theme, usage()?.[window.key]?.percent)
+                      },
+                    }),
+                  ],
                 }),
                 jsx("text", {
                   get children() {
