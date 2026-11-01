@@ -21,16 +21,16 @@ const PARTIAL_STEPS = ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉"]
 const LABEL_WIDTH = 7
 
 function meterParts(percent) {
-  // Partial edge kept with exactly two inks: the track glyph uses the band
-  // color as its foreground, so the band reads uniform and the partial's
-  // void matches the track exactly.
+  // Solid fill plus a stepped partial edge at the frontier. The track is a
+  // full-block run in one flat tone so it can match the partial's void
+  // exactly (see trackTint).
   const cells = ((percent ?? 0) / 100) * BAR_CELLS
   const full = Math.floor(cells)
   const rem = cells - full
   const step = rem > 0 ? Math.max(1, Math.round(rem * (PARTIAL_STEPS.length - 1))) : 0
   return {
     filled: "█".repeat(full) + (step ? PARTIAL_STEPS[step] : ""),
-    track: "░".repeat(Math.max(0, BAR_CELLS - full - (step ? 1 : 0))),
+    track: "█".repeat(Math.max(0, BAR_CELLS - full - (step ? 1 : 0))),
   }
 }
 
@@ -45,6 +45,28 @@ function activeProvider(context, sessionID) {
   const fromUI = context.ui.model.current()?.providerID
   if (fromUI) return fromUI
   return context.data.session.get(sessionID)?.model?.providerID
+}
+
+function rgbaInts(color) {
+  if (!color) return null
+  try {
+    const ints = typeof color.toInts === "function" ? color.toInts() : null
+    if (Array.isArray(ints) && ints.length >= 3) return ints
+    if (typeof color.r === "number") return [color.r, color.g, color.b]
+  } catch {}
+  return null
+}
+
+function trackTint(theme, percent) {
+  // Flat band tone: a quarter of the threshold color over the panel
+  // background, kept close to the previous `░` look. The track and the
+  // partial's void both use this exact color, so they can never differ.
+  const fg = rgbaInts(colorFor(theme, percent))
+  const bg = rgbaInts(theme?.background?.base) ?? [0, 0, 0]
+  if (!fg) return colorFor(theme, percent)
+  const mix = (a, b) => Math.round(0.25 * a + 0.75 * b)
+  const hex = (n) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, "0")
+  return `#${hex(mix(fg[0], bg[0]))}${hex(mix(fg[1], bg[1]))}${hex(mix(fg[2], bg[2]))}`
 }
 
 function countdown(iso) {
@@ -150,7 +172,7 @@ export default Plugin.define({
                             return colorFor(context.theme, usage()?.[window.key]?.percent)
                           },
                           get bg() {
-                            return context.theme?.border?.base ?? context.theme?.text?.muted
+                            return trackTint(context.theme, usage()?.[window.key]?.percent)
                           },
                         })
                       },
@@ -165,7 +187,7 @@ export default Plugin.define({
                             return meterParts(usage()?.[window.key]?.percent).track
                           },
                           get fg() {
-                            return colorFor(context.theme, usage()?.[window.key]?.percent)
+                            return trackTint(context.theme, usage()?.[window.key]?.percent)
                           },
                         })
                       },
