@@ -137,23 +137,37 @@ export default Plugin.define({
                 jsx("box", {
                   flexDirection: "row",
                   children: [
-                    jsx("text", {
+                    jsx(Show, {
+                      get when() {
+                        return meterParts(usage()?.[window.key]?.percent).filled !== ""
+                      },
                       get children() {
-                        return meterParts(usage()?.[window.key]?.percent).filled
-                      },
-                      get fg() {
-                        return colorFor(context.theme, usage()?.[window.key]?.percent)
-                      },
-                      get bg() {
-                        return context.theme?.border?.base ?? context.theme?.text?.muted
+                        return jsx("text", {
+                          get children() {
+                            return meterParts(usage()?.[window.key]?.percent).filled
+                          },
+                          get fg() {
+                            return colorFor(context.theme, usage()?.[window.key]?.percent)
+                          },
+                          get bg() {
+                            return context.theme?.border?.base ?? context.theme?.text?.muted
+                          },
+                        })
                       },
                     }),
-                    jsx("text", {
-                      get children() {
-                        return meterParts(usage()?.[window.key]?.percent).track
+                    jsx(Show, {
+                      get when() {
+                        return meterParts(usage()?.[window.key]?.percent).track !== ""
                       },
-                      get fg() {
-                        return colorFor(context.theme, usage()?.[window.key]?.percent)
+                      get children() {
+                        return jsx("text", {
+                          get children() {
+                            return meterParts(usage()?.[window.key]?.percent).track
+                          },
+                          get fg() {
+                            return colorFor(context.theme, usage()?.[window.key]?.percent)
+                          },
+                        })
                       },
                     }),
                   ],
