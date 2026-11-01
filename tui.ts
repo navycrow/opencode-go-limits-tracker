@@ -207,6 +207,25 @@ export default Plugin.define({
             get children() {
               return jsx("box", {
                 flexDirection: "column",
+                border: ["top"],
+                get borderColor() {
+                  return context.theme?.background?.base ?? "#000000"
+                },
+                customBorderChars: {
+                  topLeft: "█",
+                  topRight: "█",
+                  bottomLeft: "█",
+                  bottomRight: "█",
+                  horizontal: "█",
+                  vertical: "█",
+                  topT: "█",
+                  bottomT: "█",
+                  leftT: "█",
+                  rightT: "█",
+                  cross: "█",
+                },
+                marginLeft: -2,
+                marginRight: -2,
                 paddingLeft: 1,
                 paddingRight: 1,
                 paddingTop: 1,
