@@ -63,7 +63,7 @@ OpenCode automatically discovers plugins under the global config directory:
 
 ```sh
 mkdir -p ~/.config/opencode/plugins
-git clone https://github.com/BL47E/opencode-go-limits-tracker.git \
+git clone git@github.com:navycrow/opencode-go-limits-tracker.git \
   ~/.config/opencode/plugins/go-usage
 ```
 
